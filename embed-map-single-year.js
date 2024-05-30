@@ -63,6 +63,20 @@ addEventListener('load', function () {
     if (oldDate !== newDate) {
       filterByDate(map, newDate);
     }
+    
+    analyzeHistory();
+  });
+  
+  map.on('move', function (event) {
+    if (map.isSourceLoaded('ohm_landcover_hillshade')) {
+      analyzeHistory(map);
+    }
+  });
+  
+  map.on('sourcedata', function (event) {
+    if (event.isSourceLoaded) {
+      analyzeHistory(map);
+    }
   });
 });
 
@@ -167,4 +181,22 @@ function constrainFilterByDate(filter, decimalYear) {
     dateFilter.push(filter);
   }
   return dateFilter;
+}
+
+function analyzeHistory(map) {
+  let features = map.queryRenderedFeatures({filter: true});
+  let thisYear = new Date().getFullYear();
+  let ranges = features.map(f => [f.properties.start_decdate ?? thisYear, f.properties.end_decdate ?? thisYear]);
+  let earliestYear = Math.floor(Math.min(...ranges.map(r => r[0])));
+  let latestYear = Math.floor(Math.max(...ranges.map(r => r[0])));
+  let featuresByYear = {};
+  let busiestYear = NaN;
+  for (let year = earliestYear; year <= latestYear; year++) {
+    featuresByYear[year] = ranges.filter(r => r[0] <= year && r[1] >= year).length;
+    if (isNaN(busiestYear) || featuresByYear[year] > featuresByYear[busiestYear]) {
+      busiestYear = year;
+    }
+  }
+  console.log(featuresByYear);
+  console.log(busiestYear);
 }
